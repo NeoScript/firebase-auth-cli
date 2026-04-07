@@ -9,7 +9,7 @@ use crate::config::resolve_connection;
 use crate::firebase::{AuthBackend, init_firebase};
 use crate::output::{render_json_value, render_message, render_table};
 use crate::prompt::{confirm, resolve_email, resolve_string};
-use crate::{Cli, ClaimsCommand};
+use crate::{ClaimsCommand, Cli};
 
 pub async fn run(cli: &Cli, command: &ClaimsCommand) -> Result<()> {
     match command {
@@ -28,10 +28,10 @@ pub async fn run(cli: &Cli, command: &ClaimsCommand) -> Result<()> {
 }
 
 fn parse_claim_value(raw: &str) -> Value {
-    if raw.starts_with('{') || raw.starts_with('[') {
-        if let Ok(v) = serde_json::from_str(raw) {
-            return v;
-        }
+    if (raw.starts_with('{') || raw.starts_with('['))
+        && let Ok(v) = serde_json::from_str(raw)
+    {
+        return v;
     }
     if raw == "true" {
         return Value::Bool(true);
@@ -42,10 +42,10 @@ fn parse_claim_value(raw: &str) -> Value {
     if let Ok(i) = raw.parse::<i64>() {
         return Value::Number(i.into());
     }
-    if let Ok(f) = raw.parse::<f64>() {
-        if let Some(n) = serde_json::Number::from_f64(f) {
-            return Value::Number(n);
-        }
+    if let Ok(f) = raw.parse::<f64>()
+        && let Some(n) = serde_json::Number::from_f64(f)
+    {
+        return Value::Number(n);
     }
     Value::String(raw.to_string())
 }
@@ -181,10 +181,7 @@ async fn remove(cli: &Cli, key: Option<String>, email: Option<String>) -> Result
 async fn clear(cli: &Cli, email: Option<String>) -> Result<()> {
     let email = resolve_email(email)?;
 
-    if !confirm(
-        &format!("Clear ALL custom claims for {email}?"),
-        cli.yes,
-    )? {
+    if !confirm(&format!("Clear ALL custom claims for {email}?"), cli.yes)? {
         bail!("Aborted");
     }
 

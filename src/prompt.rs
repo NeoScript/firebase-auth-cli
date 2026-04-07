@@ -19,19 +19,14 @@ pub fn resolve_uid(uid: Option<String>) -> Result<String> {
         return Ok(u);
     }
     if console::user_attended() {
-        let input: String = dialoguer::Input::new()
-            .with_prompt("UID")
-            .interact_text()?;
+        let input: String = dialoguer::Input::new().with_prompt("UID").interact_text()?;
         Ok(input)
     } else {
         bail!("--uid is required (non-interactive mode)")
     }
 }
 
-pub fn resolve_email_or_uid(
-    email: Option<String>,
-    uid: Option<String>,
-) -> Result<EmailOrUid> {
+pub fn resolve_email_or_uid(email: Option<String>, uid: Option<String>) -> Result<EmailOrUid> {
     if let Some(e) = email {
         return Ok(EmailOrUid::Email(e));
     }
@@ -53,9 +48,7 @@ pub fn resolve_email_or_uid(
                 Ok(EmailOrUid::Email(email))
             }
             _ => {
-                let uid: String = dialoguer::Input::new()
-                    .with_prompt("UID")
-                    .interact_text()?;
+                let uid: String = dialoguer::Input::new().with_prompt("UID").interact_text()?;
                 Ok(EmailOrUid::Uid(uid))
             }
         }
@@ -79,7 +72,10 @@ pub fn resolve_string(opt: Option<String>, prompt_text: &str) -> Result<String> 
             .interact_text()?;
         Ok(input)
     } else {
-        bail!("--{} is required (non-interactive mode)", prompt_text.to_lowercase())
+        bail!(
+            "--{} is required (non-interactive mode)",
+            prompt_text.to_lowercase()
+        )
     }
 }
 

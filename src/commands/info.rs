@@ -1,11 +1,11 @@
 use anyhow::Result;
 use rs_firebase_admin_sdk::auth::FirebaseAuthService;
 
+use crate::Cli;
 use crate::config::resolve_connection;
 use crate::errors::IntoAnyhow;
 use crate::firebase::{AuthBackend, init_firebase};
 use crate::output::{render_message, render_single_record};
-use crate::Cli;
 
 pub async fn run(cli: &Cli) -> Result<()> {
     let conn = resolve_connection(

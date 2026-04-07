@@ -37,8 +37,9 @@ pub async fn run(cli: &Cli, command: &UsersCommand) -> Result<()> {
 
 async fn build_auth(
     cli: &Cli,
-) -> Result<rs_firebase_admin_sdk::auth::FirebaseAuth<rs_firebase_admin_sdk::client::ReqwestApiClient>>
-{
+) -> Result<
+    rs_firebase_admin_sdk::auth::FirebaseAuth<rs_firebase_admin_sdk::client::ReqwestApiClient>,
+> {
     let conn = resolve_connection(
         &cli.profile,
         &cli.project,
@@ -85,7 +86,9 @@ fn format_claims(user: &User) -> String {
 }
 
 async fn lookup_user_by_email(
-    auth: &rs_firebase_admin_sdk::auth::FirebaseAuth<rs_firebase_admin_sdk::client::ReqwestApiClient>,
+    auth: &rs_firebase_admin_sdk::auth::FirebaseAuth<
+        rs_firebase_admin_sdk::client::ReqwestApiClient,
+    >,
     email: &str,
 ) -> Result<User> {
     let ids = UserIdentifiers::builder()
@@ -180,8 +183,7 @@ async fn create(
         ("Email", user.email.unwrap_or(email)),
         (
             "Display Name",
-            user.display_name
-                .unwrap_or_else(|| "N/A".to_string()),
+            user.display_name.unwrap_or_else(|| "N/A".to_string()),
         ),
     ];
     if auto_generated {
@@ -202,9 +204,7 @@ async fn disable(cli: &Cli, email: Option<String>) -> Result<()> {
         return Ok(());
     }
 
-    let update = UserUpdate::builder(user.uid)
-        .disabled(true)
-        .build();
+    let update = UserUpdate::builder(user.uid).disabled(true).build();
     auth.update_user(update).await.into_anyhow()?;
 
     render_message(&format!("User {email} has been disabled."));
@@ -216,9 +216,7 @@ async fn enable(cli: &Cli, email: Option<String>) -> Result<()> {
     let email = resolve_email(email)?;
     let user = lookup_user_by_email(&auth, &email).await?;
 
-    let update = UserUpdate::builder(user.uid)
-        .disabled(false)
-        .build();
+    let update = UserUpdate::builder(user.uid).disabled(false).build();
     auth.update_user(update).await.into_anyhow()?;
 
     render_message(&format!("User {email} has been enabled."));
@@ -275,9 +273,7 @@ async fn remove(cli: &Cli, csv_path: Option<String>) -> Result<()> {
         let mut resolved = Vec::with_capacity(values.len());
         let mut not_found: Vec<String> = Vec::new();
         for email in &values {
-            let ids = UserIdentifiers::builder()
-                .with_email(email.clone())
-                .build();
+            let ids = UserIdentifiers::builder().with_email(email.clone()).build();
             match auth.get_user(ids).await.into_anyhow()? {
                 Some(user) => resolved.push(user.uid),
                 None => not_found.push(email.clone()),
@@ -290,7 +286,12 @@ async fn remove(cli: &Cli, csv_path: Option<String>) -> Result<()> {
             eprintln!(
                 "Warning: {} email(s) not found and will be skipped: {}",
                 not_found.len(),
-                not_found.iter().take(5).cloned().collect::<Vec<_>>().join(", ")
+                not_found
+                    .iter()
+                    .take(5)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ")
             );
             if not_found.len() > 5 {
                 eprintln!("  ... and {} more", not_found.len() - 5);
@@ -404,9 +405,8 @@ async fn list_inactive(cli: &Cli, days: u64) -> Result<()> {
         .as_millis() as i64
         - (days as i64 * 86_400 * 1000);
 
-    let threshold_dt =
-        OffsetDateTime::from_unix_timestamp_nanos(threshold_ms as i128 * 1_000_000)
-            .map_err(|e| anyhow!("Invalid threshold timestamp: {e}"))?;
+    let threshold_dt = OffsetDateTime::from_unix_timestamp_nanos(threshold_ms as i128 * 1_000_000)
+        .map_err(|e| anyhow!("Invalid threshold timestamp: {e}"))?;
 
     let spinner = ProgressBar::new_spinner();
     spinner.set_style(
@@ -446,10 +446,7 @@ async fn list_inactive(cli: &Cli, days: u64) -> Result<()> {
                         ]);
                     }
                 }
-                spinner.set_message(format!(
-                    "scanned {scanned}, found {} inactive",
-                    rows.len()
-                ));
+                spinner.set_message(format!("scanned {scanned}, found {} inactive", rows.len()));
                 page = Some(user_list);
             }
             None => break,

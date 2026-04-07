@@ -1,6 +1,6 @@
 use anyhow::Result;
-use rs_firebase_admin_sdk::auth::oob_code::{OobCodeAction, OobCodeActionType};
 use rs_firebase_admin_sdk::auth::FirebaseAuthService;
+use rs_firebase_admin_sdk::auth::oob_code::{OobCodeAction, OobCodeActionType};
 
 use crate::config::resolve_connection;
 use crate::errors::IntoAnyhow;

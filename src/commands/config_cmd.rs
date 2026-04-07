@@ -1,8 +1,8 @@
 use anyhow::{Result, bail};
 
 use crate::config::{
-    Profile, add_profile, config_dir, load_config, remove_profile, save_config,
-    set_default, resolve_connection,
+    Profile, add_profile, config_dir, load_config, remove_profile, resolve_connection, save_config,
+    set_default,
 };
 use crate::output::{render_message, render_single_record, render_table};
 use crate::prompt::{resolve_select, resolve_string};
@@ -73,10 +73,8 @@ async fn init(_cli: &Cli) -> Result<()> {
     let mut config = load_config()?;
     add_profile(&mut config, name.clone(), profile);
 
-    let make_default = crate::prompt::confirm(
-        &format!("Set '{name}' as the default profile?"),
-        false,
-    )?;
+    let make_default =
+        crate::prompt::confirm(&format!("Set '{name}' as the default profile?"), false)?;
     if make_default {
         config.default_profile = Some(name.clone());
     }
@@ -202,15 +200,24 @@ async fn show(cli: &Cli, name: Option<String>) -> Result<()> {
             ("default", is_default.to_string()),
             (
                 "project",
-                profile.project.clone().unwrap_or_else(|| "(not set)".to_string()),
+                profile
+                    .project
+                    .clone()
+                    .unwrap_or_else(|| "(not set)".to_string()),
             ),
             (
                 "credentials",
-                profile.credentials.clone().unwrap_or_else(|| "(not set)".to_string()),
+                profile
+                    .credentials
+                    .clone()
+                    .unwrap_or_else(|| "(not set)".to_string()),
             ),
             (
                 "emulator_host",
-                profile.emulator_host.clone().unwrap_or_else(|| "(not set)".to_string()),
+                profile
+                    .emulator_host
+                    .clone()
+                    .unwrap_or_else(|| "(not set)".to_string()),
             ),
         ],
     );
@@ -231,8 +238,7 @@ async fn which(cli: &Cli) -> Result<()> {
         &[
             (
                 "profile",
-                conn.profile_name
-                    .unwrap_or_else(|| "(none)".to_string()),
+                conn.profile_name.unwrap_or_else(|| "(none)".to_string()),
             ),
             (
                 "source",
@@ -241,18 +247,15 @@ async fn which(cli: &Cli) -> Result<()> {
             ),
             (
                 "project",
-                conn.project
-                    .unwrap_or_else(|| "(auto-detect)".to_string()),
+                conn.project.unwrap_or_else(|| "(auto-detect)".to_string()),
             ),
             (
                 "credentials",
-                conn.credentials
-                    .unwrap_or_else(|| "(ADC)".to_string()),
+                conn.credentials.unwrap_or_else(|| "(ADC)".to_string()),
             ),
             (
                 "emulator",
-                conn.emulator_host
-                    .unwrap_or_else(|| "no".to_string()),
+                conn.emulator_host.unwrap_or_else(|| "no".to_string()),
             ),
         ],
     );

@@ -8,7 +8,12 @@ pub fn render_single_record(format: &OutputFormat, fields: &[(&str, String)]) {
         OutputFormat::Table => {
             let max_key = fields.iter().map(|(k, _)| k.len()).max().unwrap_or(0);
             for (key, value) in fields {
-                println!("  {:<width$}  {}", format!("{key}:"), value, width = max_key + 1);
+                println!(
+                    "  {:<width$}  {}",
+                    format!("{key}:"),
+                    value,
+                    width = max_key + 1
+                );
             }
         }
         OutputFormat::Json => {
@@ -19,7 +24,9 @@ pub fn render_single_record(format: &OutputFormat, fields: &[(&str, String)]) {
             println!("{}", serde_json::to_string(&Value::Object(map)).unwrap());
         }
         OutputFormat::Csv => {
-            eprintln!("Warning: --format csv is not applicable to single records, using table format");
+            eprintln!(
+                "Warning: --format csv is not applicable to single records, using table format"
+            );
             render_single_record(&OutputFormat::Table, fields);
         }
     }

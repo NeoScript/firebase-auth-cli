@@ -12,13 +12,23 @@ use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 #[derive(Parser)]
 #[command(name = "fbadmin", version, about = "Firebase Auth administration CLI")]
 pub struct Cli {
-    #[arg(long, short = 'p', env = "FBADMIN_PROFILE", help = "Use a named profile from config")]
+    #[arg(
+        long,
+        short = 'p',
+        env = "FBADMIN_PROFILE",
+        help = "Use a named profile from config"
+    )]
     pub profile: Option<String>,
 
     #[arg(long, env = "FBADMIN_PROJECT", help = "Firebase project ID (uses ADC)")]
     pub project: Option<String>,
 
-    #[arg(long, short = 'c', env = "FBADMIN_CREDENTIALS", help = "Path to service account JSON")]
+    #[arg(
+        long,
+        short = 'c',
+        env = "FBADMIN_CREDENTIALS",
+        help = "Path to service account JSON"
+    )]
     pub credentials: Option<String>,
 
     #[arg(

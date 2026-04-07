@@ -105,10 +105,10 @@ pub fn resolve_profile_name(
         return Ok(Some(env_profile));
     }
 
-    if let Some(ref default) = config.default_profile {
-        if config.profiles.contains_key(default) {
-            return Ok(Some(default.clone()));
-        }
+    if let Some(ref default) = config.default_profile
+        && config.profiles.contains_key(default)
+    {
+        return Ok(Some(default.clone()));
     }
 
     Ok(None)
@@ -137,21 +137,15 @@ pub fn resolve_connection(
         (Profile::default(), None)
     };
 
-    let emulator_host = cli_emulator_host
-        .clone()
-        .or(profile.emulator_host);
+    let emulator_host = cli_emulator_host.clone().or(profile.emulator_host);
 
-    let project = cli_project
-        .clone()
-        .or(profile.project);
+    let project = cli_project.clone().or(profile.project);
 
-    let credentials = cli_credentials
-        .clone()
-        .or_else(|| {
-            profile
-                .credentials
-                .map(|c| shellexpand::tilde(&c).to_string())
-        });
+    let credentials = cli_credentials.clone().or_else(|| {
+        profile
+            .credentials
+            .map(|c| shellexpand::tilde(&c).to_string())
+    });
 
     Ok(ResolvedConnection {
         profile_name,

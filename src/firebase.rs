@@ -1,14 +1,12 @@
 use anyhow::{Context, Result, anyhow, bail};
-use rs_firebase_admin_sdk::{
-    App,
-    auth::FirebaseAuth,
-    client::ReqwestApiClient,
-};
+use rs_firebase_admin_sdk::{App, auth::FirebaseAuth, client::ReqwestApiClient};
 
 use crate::config::ResolvedConnection;
 
 pub enum AuthBackend {
-    Emulator { host: String },
+    Emulator {
+        host: String,
+    },
     Live {
         credentials_path: Option<String>,
         project_id: Option<String>,
@@ -54,9 +52,7 @@ pub async fn init_firebase(backend: AuthBackend) -> Result<FirebaseAuth<ReqwestA
                 .or_else(|| sa_json["project_id"].as_str().map(String::from))
                 .ok_or_else(|| anyhow!("project_id required when not in service account JSON"))?;
 
-            use google_cloud_auth::credentials::service_account::{
-                self, AccessSpecifier,
-            };
+            use google_cloud_auth::credentials::service_account::{self, AccessSpecifier};
             use rs_firebase_admin_sdk::Credentials;
 
             let scopes = [
