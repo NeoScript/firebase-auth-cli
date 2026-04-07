@@ -1,0 +1,30 @@
+[package]
+name = "fbadmin"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Firebase Auth administration CLI"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+comfy-table = "7"
+confy = "0.6"
+console = "0.15"
+csv = "1"
+dialoguer = "0.11"
+error-stack = "0.5"
+google-cloud-auth = "1"
+indicatif = "0.17"
+rand = "0.9"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+rs-firebase-admin-sdk = { version = "4", default-features = false, features = ["rustls-tls", "tokens"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+shellexpand = "3"
+tokio = { version = "1", features = ["full"] }
+toml = "0.8"
+
+[profile.release]
+strip = true
+lto = true
