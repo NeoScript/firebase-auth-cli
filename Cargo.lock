@@ -817,16 +817,6 @@ dependencies = [
 
 [[package]]
 name = "error-stack"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe413319145d1063f080f27556fd30b1d70b01e2ba10c2a6e40d4be982ffc5d1"
-dependencies = [
- "anyhow",
- "rustc_version",
-]
-
-[[package]]
-name = "error-stack"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b878b3fac9613c3c7f22eb70bc8a3c6ebdc03cc11479ee60fde1692d747fd45f"
@@ -852,7 +842,7 @@ dependencies = [
  "console",
  "csv",
  "dialoguer",
- "error-stack 0.5.0",
+ "error-stack",
  "google-cloud-auth",
  "indicatif",
  "rand 0.9.2",
@@ -861,6 +851,7 @@ dependencies = [
  "serde",
  "serde_json",
  "shellexpand",
+ "time",
  "tokio",
  "toml",
 ]
@@ -2323,7 +2314,7 @@ checksum = "f98ba67c8e770f80901cef353537bc85c1e4db1b7fb02b8ee757db38c1fb4bd2"
 dependencies = [
  "base64",
  "bytes",
- "error-stack 0.6.0",
+ "error-stack",
  "google-cloud-auth",
  "headers",
  "http",
