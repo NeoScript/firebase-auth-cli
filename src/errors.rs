@@ -8,6 +8,9 @@ pub trait IntoAnyhow<T> {
 
 impl<T> IntoAnyhow<T> for std::result::Result<T, Report<ApiClientError>> {
     fn into_anyhow(self) -> Result<T> {
-        self.map_err(|e| anyhow::anyhow!("{e}"))
+        self.map_err(|e| {
+            tracing::debug!("{e:?}");
+            anyhow::anyhow!("{e}")
+        })
     }
 }

@@ -1,11 +1,11 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use rs_firebase_admin_sdk::auth::FirebaseAuthService;
 
 use crate::Cli;
 use crate::config::resolve_connection;
 use crate::errors::IntoAnyhow;
 use crate::firebase::{AuthBackend, init_firebase};
-use crate::output::{render_message, render_single_record};
+use crate::output::{render_message, render_single_record, render_success};
 
 pub async fn run(cli: &Cli) -> Result<()> {
     let conn = resolve_connection(
@@ -50,9 +50,15 @@ pub async fn run(cli: &Cli) -> Result<()> {
 
     render_single_record(&cli.format, &fields);
 
+    tracing::debug!("Verifying connectivity");
     match init_firebase(AuthBackend::from_resolved(&conn)).await {
-        Ok(auth) => match auth.list_users(1, None).await.into_anyhow() {
-            Ok(_) => render_message("status: connected ✓"),
+        Ok(auth) => match auth
+            .list_users(1, None)
+            .await
+            .into_anyhow()
+            .context("Connectivity check failed")
+        {
+            Ok(_) => render_success("status: connected"),
             Err(err) => render_message(&format!("status: error - {err}")),
         },
         Err(err) => render_message(&format!("status: error - {err}")),

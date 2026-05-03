@@ -1,16 +1,31 @@
-use comfy_table::{Table, presets::UTF8_FULL_CONDENSED};
+use comfy_table::modifiers::UTF8_ROUND_CORNERS;
+use comfy_table::{Attribute, Cell, Table, presets::UTF8_FULL_CONDENSED};
+use console::Style;
 use serde_json::Value;
 
 use crate::OutputFormat;
+
+fn key_style() -> Style {
+    Style::new().bold().dim()
+}
+
+fn success_style() -> Style {
+    Style::new().green()
+}
+
+fn warning_style() -> Style {
+    Style::new().yellow()
+}
 
 pub fn render_single_record(format: &OutputFormat, fields: &[(&str, String)]) {
     match format {
         OutputFormat::Table => {
             let max_key = fields.iter().map(|(k, _)| k.len()).max().unwrap_or(0);
+            let ks = key_style();
             for (key, value) in fields {
                 println!(
                     "  {:<width$}  {}",
-                    format!("{key}:"),
+                    ks.apply_to(format!("{key}:")),
                     value,
                     width = max_key + 1
                 );
@@ -37,7 +52,13 @@ pub fn render_table(format: &OutputFormat, headers: &[&str], rows: &[Vec<String>
         OutputFormat::Table => {
             let mut table = Table::new();
             table.load_preset(UTF8_FULL_CONDENSED);
-            table.set_header(headers.iter().map(|h| h.to_string()).collect::<Vec<_>>());
+            table.apply_modifier(UTF8_ROUND_CORNERS);
+            table.set_header(
+                headers
+                    .iter()
+                    .map(|h| Cell::new(h).add_attribute(Attribute::Bold))
+                    .collect::<Vec<_>>(),
+            );
             for row in rows {
                 table.add_row(row);
             }
@@ -84,6 +105,14 @@ pub fn render_json_value(format: &OutputFormat, value: &Value) {
 
 pub fn render_message(msg: &str) {
     println!("{msg}");
+}
+
+pub fn render_success(msg: &str) {
+    println!("{}", success_style().apply_to(msg));
+}
+
+pub fn render_warning(msg: &str) {
+    eprintln!("{}", warning_style().apply_to(msg));
 }
 
 pub fn render_table_streaming(

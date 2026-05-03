@@ -1,13 +1,14 @@
 use std::collections::BTreeMap;
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use indicatif::ProgressBar;
 use rs_firebase_admin_sdk::auth::{Claims, FirebaseAuthService, UserIdentifiers, UserUpdate};
 use serde_json::Value;
 
 use crate::config::resolve_connection;
+use crate::errors::IntoAnyhow;
 use crate::firebase::{AuthBackend, init_firebase};
-use crate::output::{render_json_value, render_message, render_table};
+use crate::output::{render_json_value, render_message, render_success, render_table};
 use crate::prompt::{confirm, resolve_email, resolve_string};
 use crate::{ClaimsCommand, Cli};
 
@@ -65,12 +66,6 @@ fn map_to_claims(map: BTreeMap<String, Value>) -> Claims {
     Claims::from(map)
 }
 
-macro_rules! fb_anyhow {
-    ($expr:expr) => {
-        $expr.map_err(|e| anyhow::anyhow!("{e}"))
-    };
-}
-
 async fn get(cli: &Cli, email: Option<String>) -> Result<()> {
     let email = resolve_email(email)?;
     let conn = resolve_connection(
@@ -81,8 +76,13 @@ async fn get(cli: &Cli, email: Option<String>) -> Result<()> {
     )?;
     let auth = init_firebase(AuthBackend::from_resolved(&conn)).await?;
 
+    tracing::debug!("Fetching claims for {email}");
     let identifiers = UserIdentifiers::builder().with_email(email.clone()).build();
-    let user = fb_anyhow!(auth.get_user(identifiers).await)?
+    let user = auth
+        .get_user(identifiers)
+        .await
+        .into_anyhow()
+        .context(format!("Failed to fetch user {email}"))?
         .ok_or_else(|| anyhow::anyhow!("User not found: {email}"))?;
 
     let claims_map = claims_to_map(&user.custom_claims);
@@ -114,8 +114,13 @@ async fn merge(
     )?;
     let auth = init_firebase(AuthBackend::from_resolved(&conn)).await?;
 
+    tracing::debug!("Fetching user {email} for claim merge");
     let identifiers = UserIdentifiers::builder().with_email(email.clone()).build();
-    let user = fb_anyhow!(auth.get_user(identifiers).await)?
+    let user = auth
+        .get_user(identifiers)
+        .await
+        .into_anyhow()
+        .context(format!("Failed to fetch user {email}"))?
         .ok_or_else(|| anyhow::anyhow!("User not found: {email}"))?;
 
     let mut claims_map = claims_to_map(&user.custom_claims);
@@ -127,10 +132,15 @@ async fn merge(
         return Ok(());
     }
 
+    tracing::debug!("Updating claims for {email}");
     let update = UserUpdate::builder(user.uid)
         .custom_claims(map_to_claims(claims_map))
         .build();
-    let updated_user = fb_anyhow!(auth.update_user(update).await)?;
+    let updated_user = auth
+        .update_user(update)
+        .await
+        .into_anyhow()
+        .context(format!("Failed to update claims for {email}"))?;
 
     let updated_map = claims_to_map(&updated_user.custom_claims);
     render_json_value(&cli.format, &map_to_json(&updated_map));
@@ -150,8 +160,13 @@ async fn remove(cli: &Cli, key: Option<String>, email: Option<String>) -> Result
     )?;
     let auth = init_firebase(AuthBackend::from_resolved(&conn)).await?;
 
+    tracing::debug!("Fetching user {email} for claim removal");
     let identifiers = UserIdentifiers::builder().with_email(email.clone()).build();
-    let user = fb_anyhow!(auth.get_user(identifiers).await)?
+    let user = auth
+        .get_user(identifiers)
+        .await
+        .into_anyhow()
+        .context(format!("Failed to fetch user {email}"))?
         .ok_or_else(|| anyhow::anyhow!("User not found: {email}"))?;
 
     let mut claims_map = claims_to_map(&user.custom_claims);
@@ -167,10 +182,15 @@ async fn remove(cli: &Cli, key: Option<String>, email: Option<String>) -> Result
         return Ok(());
     }
 
+    tracing::debug!("Removing claim '{key}' for {email}");
     let update = UserUpdate::builder(user.uid)
         .custom_claims(map_to_claims(claims_map))
         .build();
-    let updated_user = fb_anyhow!(auth.update_user(update).await)?;
+    let updated_user = auth
+        .update_user(update)
+        .await
+        .into_anyhow()
+        .context(format!("Failed to update claims for {email}"))?;
 
     let updated_map = claims_to_map(&updated_user.custom_claims);
     render_json_value(&cli.format, &map_to_json(&updated_map));
@@ -200,16 +220,24 @@ async fn clear(cli: &Cli, email: Option<String>) -> Result<()> {
     )?;
     let auth = init_firebase(AuthBackend::from_resolved(&conn)).await?;
 
+    tracing::debug!("Clearing all claims for {email}");
     let identifiers = UserIdentifiers::builder().with_email(email.clone()).build();
-    let user = fb_anyhow!(auth.get_user(identifiers).await)?
+    let user = auth
+        .get_user(identifiers)
+        .await
+        .into_anyhow()
+        .context(format!("Failed to fetch user {email}"))?
         .ok_or_else(|| anyhow::anyhow!("User not found: {email}"))?;
 
     let update = UserUpdate::builder(user.uid)
         .custom_claims(map_to_claims(BTreeMap::new()))
         .build();
-    fb_anyhow!(auth.update_user(update).await)?;
+    auth.update_user(update)
+        .await
+        .into_anyhow()
+        .context(format!("Failed to clear claims for {email}"))?;
 
-    render_message(&format!("Cleared all custom claims for {email}"));
+    render_success(&format!("Cleared all custom claims for {email}"));
 
     Ok(())
 }
@@ -233,7 +261,11 @@ async fn find(cli: &Cli, key: String, value: Option<String>, exclusive: bool) ->
     loop {
         spinner.tick();
 
-        let page = fb_anyhow!(auth.list_users(1000, prev_page).await)?;
+        let page = auth
+            .list_users(1000, prev_page)
+            .await
+            .into_anyhow()
+            .context("Failed to list users during claim search")?;
 
         let user_list = match page {
             Some(list) => list,

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use rs_firebase_admin_sdk::auth::FirebaseAuthService;
 use rs_firebase_admin_sdk::auth::oob_code::{OobCodeAction, OobCodeActionType};
 
@@ -37,11 +37,13 @@ async fn generate_link(
     )?;
     let auth = init_firebase(AuthBackend::from_resolved(&conn)).await?;
 
-    let action = OobCodeAction::builder(action_type, email).build();
+    tracing::debug!("Generating {action_type:?} link for {email}");
+    let action = OobCodeAction::builder(action_type, email.clone()).build();
     let link = auth
         .generate_email_action_link(action)
         .await
-        .into_anyhow()?;
+        .into_anyhow()
+        .context(format!("Failed to generate link for {email}"))?;
 
     render_message(&link);
 

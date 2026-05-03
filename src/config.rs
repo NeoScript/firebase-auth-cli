@@ -86,6 +86,7 @@ pub fn resolve_profile_name(
                 }
             );
         }
+        tracing::debug!("Using profile '{name}' from CLI flag");
         return Ok(Some(name.clone()));
     }
 
@@ -102,15 +103,18 @@ pub fn resolve_profile_name(
                 }
             );
         }
+        tracing::debug!("Using profile '{env_profile}' from FBADMIN_PROFILE env");
         return Ok(Some(env_profile));
     }
 
     if let Some(ref default) = config.default_profile
         && config.profiles.contains_key(default)
     {
+        tracing::debug!("Using default profile '{default}'");
         return Ok(Some(default.clone()));
     }
 
+    tracing::debug!("No profile resolved");
     Ok(None)
 }
 
@@ -146,6 +150,13 @@ pub fn resolve_connection(
             .credentials
             .map(|c| shellexpand::tilde(&c).to_string())
     });
+
+    tracing::debug!(
+        project = ?project,
+        credentials = ?credentials,
+        emulator = ?emulator_host,
+        "Resolved connection"
+    );
 
     Ok(ResolvedConnection {
         profile_name,

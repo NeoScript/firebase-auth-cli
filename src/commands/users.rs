@@ -1,6 +1,6 @@
 use std::time::SystemTime;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use indicatif::{ProgressBar, ProgressStyle};
 use rand::Rng;
 use rs_firebase_admin_sdk::auth::{
@@ -11,7 +11,7 @@ use time::OffsetDateTime;
 use crate::config::resolve_connection;
 use crate::errors::IntoAnyhow;
 use crate::firebase::{AuthBackend, init_firebase};
-use crate::output::{render_message, render_single_record, render_table};
+use crate::output::{render_message, render_single_record, render_success, render_table};
 use crate::prompt::{
     EmailOrUid, confirm, resolve_csv_path, resolve_email, resolve_email_or_uid,
     resolve_optional_string, resolve_password,
@@ -28,7 +28,7 @@ pub async fn run(cli: &Cli, command: &UsersCommand) -> Result<()> {
         } => create(cli, email.clone(), password.clone(), display_name.clone()).await,
         UsersCommand::Disable { email } => disable(cli, email.clone()).await,
         UsersCommand::Enable { email } => enable(cli, email.clone()).await,
-        UsersCommand::Remove { csv } => remove(cli, csv.clone()).await,
+        UsersCommand::Remove { email, csv } => remove(cli, email.clone(), csv.clone()).await,
         UsersCommand::List { limit } => list(cli, *limit).await,
         UsersCommand::ListInactive { days } => list_inactive(cli, *days).await,
         UsersCommand::Count => count(cli).await,
@@ -91,12 +91,14 @@ async fn lookup_user_by_email(
     >,
     email: &str,
 ) -> Result<User> {
+    tracing::debug!("Looking up user by email: {email}");
     let ids = UserIdentifiers::builder()
         .with_email(email.to_string())
         .build();
     auth.get_user(ids)
         .await
-        .into_anyhow()?
+        .into_anyhow()
+        .context(format!("Failed to fetch user {email}"))?
         .ok_or_else(|| anyhow!("User not found: {email}"))
 }
 
@@ -109,10 +111,12 @@ async fn get(cli: &Cli, email: Option<String>, uid: Option<String>) -> Result<()
         EmailOrUid::Uid(u) => UserIdentifiers::builder().with_uid(u.clone()).build(),
     };
 
+    tracing::debug!("Fetching user info");
     let user = auth
         .get_user(ids)
         .await
-        .into_anyhow()?
+        .into_anyhow()
+        .context("Failed to fetch user")?
         .ok_or_else(|| anyhow!("User not found"))?;
 
     let last_login = user_epoch_ms(&user, "last_login_at")
@@ -123,7 +127,12 @@ async fn get(cli: &Cli, email: Option<String>, uid: Option<String>) -> Result<()
         .unwrap_or_else(|| "N/A".to_string());
     let providers = format_providers(&user);
     let claims = format_claims(&user);
-    let disabled = user.disabled.unwrap_or(false).to_string();
+    let disabled_val = user.disabled.unwrap_or(false);
+    let disabled = if disabled_val {
+        console::style("true").red().to_string()
+    } else {
+        console::style("false").green().to_string()
+    };
     let email_str = user.email.unwrap_or_else(|| "N/A".to_string());
     let display_name = user.display_name.unwrap_or_else(|| "N/A".to_string());
 
@@ -164,16 +173,21 @@ async fn create(
             .collect()
     });
 
+    tracing::debug!("Creating user {email}");
     let user = auth
         .create_user(NewUser::email_and_password(email.clone(), password.clone()))
         .await
-        .into_anyhow()?;
+        .into_anyhow()
+        .context(format!("Failed to create user {email}"))?;
 
     let user = if let Some(ref name) = display_name {
         let update = UserUpdate::builder(user.uid.clone())
             .display_name(AttributeOp::Change(name.clone()))
             .build();
-        auth.update_user(update).await.into_anyhow()?
+        auth.update_user(update)
+            .await
+            .into_anyhow()
+            .context(format!("Failed to set display name for {email}"))?
     } else {
         user
     };
@@ -204,10 +218,14 @@ async fn disable(cli: &Cli, email: Option<String>) -> Result<()> {
         return Ok(());
     }
 
+    tracing::debug!("Disabling user {email}");
     let update = UserUpdate::builder(user.uid).disabled(true).build();
-    auth.update_user(update).await.into_anyhow()?;
+    auth.update_user(update)
+        .await
+        .into_anyhow()
+        .context(format!("Failed to disable user {email}"))?;
 
-    render_message(&format!("User {email} has been disabled."));
+    render_success(&format!("User {email} has been disabled."));
     Ok(())
 }
 
@@ -216,14 +234,55 @@ async fn enable(cli: &Cli, email: Option<String>) -> Result<()> {
     let email = resolve_email(email)?;
     let user = lookup_user_by_email(&auth, &email).await?;
 
+    tracing::debug!("Enabling user {email}");
     let update = UserUpdate::builder(user.uid).disabled(false).build();
-    auth.update_user(update).await.into_anyhow()?;
+    auth.update_user(update)
+        .await
+        .into_anyhow()
+        .context(format!("Failed to enable user {email}"))?;
 
-    render_message(&format!("User {email} has been enabled."));
+    render_success(&format!("User {email} has been enabled."));
     Ok(())
 }
 
-async fn remove(cli: &Cli, csv_path: Option<String>) -> Result<()> {
+async fn remove(cli: &Cli, email: Option<String>, csv_path: Option<String>) -> Result<()> {
+    if let Some(email) = email {
+        return remove_single(cli, email).await;
+    }
+    remove_bulk(cli, csv_path).await
+}
+
+async fn remove_single(cli: &Cli, email: String) -> Result<()> {
+    let auth = build_auth(cli).await?;
+    let user = lookup_user_by_email(&auth, &email).await?;
+
+    if cli.dry_run {
+        render_message(&format!(
+            "Dry run: would delete user {email} ({})",
+            user.uid
+        ));
+        return Ok(());
+    }
+
+    if !confirm(
+        &format!("Delete user {email} ({})? This cannot be undone.", user.uid),
+        cli.yes,
+    )? {
+        render_message("Cancelled.");
+        return Ok(());
+    }
+
+    tracing::debug!("Deleting user {} ({})", email, user.uid);
+    auth.delete_users(vec![user.uid], true)
+        .await
+        .into_anyhow()
+        .context(format!("Failed to delete user {email}"))?;
+
+    render_success(&format!("Deleted user {email}."));
+    Ok(())
+}
+
+async fn remove_bulk(cli: &Cli, csv_path: Option<String>) -> Result<()> {
     let auth = build_auth(cli).await?;
     let path = resolve_csv_path(csv_path)?;
 
@@ -274,7 +333,12 @@ async fn remove(cli: &Cli, csv_path: Option<String>) -> Result<()> {
         let mut not_found: Vec<String> = Vec::new();
         for email in &values {
             let ids = UserIdentifiers::builder().with_email(email.clone()).build();
-            match auth.get_user(ids).await.into_anyhow()? {
+            match auth
+                .get_user(ids)
+                .await
+                .into_anyhow()
+                .context(format!("Failed to look up {email}"))?
+            {
                 Some(user) => resolved.push(user.uid),
                 None => not_found.push(email.clone()),
             }
@@ -331,14 +395,16 @@ async fn remove(cli: &Cli, csv_path: Option<String>) -> Result<()> {
     );
 
     for batch in uids.chunks(1000) {
+        tracing::debug!("Deleting batch of {} users", batch.len());
         auth.delete_users(batch.to_vec(), true)
             .await
-            .into_anyhow()?;
+            .into_anyhow()
+            .context("Failed to delete user batch")?;
         pb.inc(batch.len() as u64);
     }
     pb.finish_and_clear();
 
-    render_message(&format!("Deleted {} user(s).", total));
+    render_success(&format!("Deleted {} user(s).", total));
     Ok(())
 }
 
@@ -358,7 +424,11 @@ async fn list(cli: &Cli, limit: Option<usize>) -> Result<()> {
     let max = limit.unwrap_or(usize::MAX);
 
     loop {
-        let result = auth.list_users(1000, page).await.into_anyhow()?;
+        let result = auth
+            .list_users(1000, page)
+            .await
+            .into_anyhow()
+            .context("Failed to list users")?;
         match result {
             Some(user_list) => {
                 for user in &user_list.users {
@@ -421,7 +491,11 @@ async fn list_inactive(cli: &Cli, days: u64) -> Result<()> {
     let mut page = None;
 
     loop {
-        let result = auth.list_users(1000, page).await.into_anyhow()?;
+        let result = auth
+            .list_users(1000, page)
+            .await
+            .into_anyhow()
+            .context("Failed to list users during inactivity scan")?;
         match result {
             Some(user_list) => {
                 for user in &user_list.users {
@@ -485,7 +559,11 @@ async fn count(cli: &Cli) -> Result<()> {
     let mut page = None;
 
     loop {
-        let result = auth.list_users(1000, page).await.into_anyhow()?;
+        let result = auth
+            .list_users(1000, page)
+            .await
+            .into_anyhow()
+            .context("Failed to list users during count")?;
         match result {
             Some(user_list) => {
                 total += user_list.users.len();

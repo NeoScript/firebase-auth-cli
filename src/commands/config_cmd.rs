@@ -4,7 +4,7 @@ use crate::config::{
     Profile, add_profile, config_dir, load_config, remove_profile, resolve_connection, save_config,
     set_default,
 };
-use crate::output::{render_message, render_single_record, render_table};
+use crate::output::{render_message, render_single_record, render_success, render_table};
 use crate::prompt::{resolve_select, resolve_string};
 use crate::{Cli, ConfigCommand};
 
@@ -80,7 +80,7 @@ async fn init(_cli: &Cli) -> Result<()> {
     }
 
     save_config(&config)?;
-    render_message(&format!("Profile '{name}' created."));
+    render_success(&format!("Profile '{name}' created."));
 
     Ok(())
 }
@@ -114,9 +114,9 @@ async fn add(
     save_config(&config)?;
 
     if overwriting {
-        render_message(&format!("Profile '{name}' updated."));
+        render_success(&format!("Profile '{name}' updated."));
     } else {
-        render_message(&format!("Profile '{name}' added."));
+        render_success(&format!("Profile '{name}' added."));
     }
 
     Ok(())
@@ -131,7 +131,7 @@ async fn remove(_cli: &Cli, name: Option<String>) -> Result<()> {
     remove_profile(&mut config, &name)?;
     save_config(&config)?;
 
-    render_message(&format!("Profile '{name}' removed."));
+    render_success(&format!("Profile '{name}' removed."));
     Ok(())
 }
 
@@ -144,7 +144,7 @@ async fn default(_cli: &Cli, name: Option<String>) -> Result<()> {
     set_default(&mut config, &name)?;
     save_config(&config)?;
 
-    render_message(&format!("Default profile set to '{name}'."));
+    render_success(&format!("Default profile set to '{name}'."));
     Ok(())
 }
 

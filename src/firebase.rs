@@ -34,6 +34,7 @@ pub async fn init_firebase(backend: AuthBackend) -> Result<FirebaseAuth<ReqwestA
             } else {
                 format!("http://{host}")
             };
+            tracing::info!("Connecting to emulator at {url}");
             let app = App::emulated();
             Ok(app.auth(url))
         }
@@ -42,6 +43,7 @@ pub async fn init_firebase(backend: AuthBackend) -> Result<FirebaseAuth<ReqwestA
             project_id,
         } => {
             let expanded = shellexpand::tilde(&path).to_string();
+            tracing::info!("Using service account credentials: {expanded}");
             let bytes = tokio::fs::read(&expanded)
                 .await
                 .context(format!("Failed to read credentials file: {expanded}"))?;
@@ -51,6 +53,7 @@ pub async fn init_firebase(backend: AuthBackend) -> Result<FirebaseAuth<ReqwestA
             let proj_id = project_id
                 .or_else(|| sa_json["project_id"].as_str().map(String::from))
                 .ok_or_else(|| anyhow!("project_id required when not in service account JSON"))?;
+            tracing::debug!("Project ID: {proj_id}");
 
             use google_cloud_auth::credentials::service_account::{self, AccessSpecifier};
             use rs_firebase_admin_sdk::Credentials;
@@ -73,6 +76,7 @@ pub async fn init_firebase(backend: AuthBackend) -> Result<FirebaseAuth<ReqwestA
             credentials_path: None,
             project_id: Some(id),
         } => {
+            tracing::info!("Using ADC with project ID: {id}");
             let app = App::live_with_project_id(&id)
                 .await
                 .map_err(|e| anyhow!("{e}"))
@@ -83,6 +87,7 @@ pub async fn init_firebase(backend: AuthBackend) -> Result<FirebaseAuth<ReqwestA
             credentials_path: None,
             project_id: None,
         } => {
+            tracing::info!("Using ADC with auto-detected project");
             let app = App::live()
                 .await
                 .map_err(|e| anyhow!("{e}"))

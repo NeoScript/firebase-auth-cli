@@ -107,16 +107,18 @@ fbadmin info    # Shows resolved profile, project, credentials, and verifies con
 
 ## Global flags
 
-| Flag | Short | Env var | Description |
-|---|---|---|---|
-| `--profile` | `-p` | `FBADMIN_PROFILE` | Named profile from config |
-| `--project` | | `FBADMIN_PROJECT` | Firebase project ID |
-| `--credentials` | `-c` | `FBADMIN_CREDENTIALS` | Path to service account JSON |
-| `--emulator-host` | `-e` | `FBADMIN_EMULATOR_HOST` | Emulator host:port |
-| `--format` | `-f` | | Output format: `table`, `json`, `csv` |
-| `--dry-run` | | | Preview destructive operations |
-| `--yes` | `-y` | | Skip confirmation prompts |
-| `--verbose` | `-v` | | Increase verbosity (`-vv`, `-vvv`) |
+
+| Flag              | Short | Env var                 | Description                           |
+| ----------------- | ----- | ----------------------- | ------------------------------------- |
+| `--profile`       | `-p`  | `FBADMIN_PROFILE`       | Named profile from config             |
+| `--project`       |       | `FBADMIN_PROJECT`       | Firebase project ID                   |
+| `--credentials`   | `-c`  | `FBADMIN_CREDENTIALS`   | Path to service account JSON          |
+| `--emulator-host` | `-e`  | `FBADMIN_EMULATOR_HOST` | Emulator host:port                    |
+| `--format`        | `-f`  |                         | Output format: `table`, `json`, `csv` |
+| `--dry-run`       |       |                         | Preview destructive operations        |
+| `--yes`           | `-y`  |                         | Skip confirmation prompts             |
+| `--verbose`       | `-v`  |                         | Increase verbosity (`-vv`, `-vvv`)    |
+
 
 ## Output formats
 

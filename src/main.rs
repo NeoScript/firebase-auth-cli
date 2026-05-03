@@ -10,7 +10,17 @@ mod prompt;
 use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
-#[command(name = "fbadmin", version, about = "Firebase Auth administration CLI")]
+#[command(
+    name = "fbadmin",
+    version,
+    long_version = const_format::formatcp!(
+        "{}\n{} ({})",
+        env!("CARGO_PKG_VERSION"),
+        env!("VERGEN_GIT_SHA"),
+        env!("VERGEN_BUILD_DATE"),
+    ),
+    about = "Firebase Auth administration CLI"
+)]
 pub struct Cli {
     #[arg(
         long,
@@ -198,9 +208,11 @@ pub enum UsersCommand {
         #[arg(long)]
         email: Option<String>,
     },
-    /// Bulk delete users from CSV
+    /// Delete user(s) by email or from CSV
     Remove {
-        #[arg(long)]
+        #[arg(long, conflicts_with = "csv")]
+        email: Option<String>,
+        #[arg(long, conflicts_with = "email")]
         csv: Option<String>,
     },
     /// List all users (paginated)
@@ -244,9 +256,25 @@ pub enum EmulatorCommand {
     Config,
 }
 
+fn init_logging(verbose: u8) {
+    let level = match verbose {
+        0 => "warn",
+        1 => "info",
+        2 => "debug",
+        _ => "trace",
+    };
+    let filter = tracing_subscriber::EnvFilter::new(format!("fbadmin={level}"));
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_writer(std::io::stderr)
+        .without_time()
+        .init();
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
+    init_logging(cli.verbose);
 
     if let Err(err) = run(cli).await {
         eprintln!("Error: {err:#}");
