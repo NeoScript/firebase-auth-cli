@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.94"
 description = "Firebase Auth administration CLI"
+license = "AGPL-3.0-only"
+repository = "https://github.com/NeoScript/firebase-admin-cli"
+homepage = "https://github.com/NeoScript/firebase-admin-cli"
 
 [dependencies]
 anyhow = "1"
@@ -34,3 +37,8 @@ vergen-gitcl = { version = "9", features = ["build"] }
 [profile.release]
 strip = true
 lto = true
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
