@@ -4,6 +4,26 @@ A command-line tool for managing Firebase Authentication — users, custom claim
 
 ## Installation
 
+### Homebrew (macOS & Linux)
+
+```bash
+brew install NeoScript/fbadmin/fbadmin
+```
+
+### Shell installer (macOS & Linux)
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/NeoScript/firebase-admin-cli/releases/latest/download/fbadmin-installer.sh | sh
+```
+
+### PowerShell installer (Windows)
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/NeoScript/firebase-admin-cli/releases/latest/download/fbadmin-installer.ps1 | iex"
+```
+
+### From source
+
 Requires Rust 1.94+.
 
 ```bash
