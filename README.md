@@ -7,7 +7,7 @@ A command-line tool for managing Firebase Authentication — users, custom claim
 ### Homebrew (macOS & Linux)
 
 ```bash
-brew install NeoScript/fire-auth/fire-auth
+brew install NeoScript/fire-auth/firebase-auth-cli
 ```
 
 ### Shell installer (macOS & Linux)
